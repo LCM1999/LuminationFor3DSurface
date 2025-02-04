@@ -18,44 +18,10 @@
 #include "smoothing.h"
 
 int loadingScales = 20;
-bool loadNormalsYJ(std::string path,
-	//passed by reference
-	std::vector<glm::vec3>& out_normals) {
-	//how to construct indicies for EBO..?
-	//maybe mix with assimp in usage as a quick hack
-	std::cout << "Loading .yj file : " << path << "\n";
-	//std::vector<glm::vec3> vertices;
-	//std::vector<glm::vec3> normals;
-	std::ifstream infile(path);
-	glm::vec3 vec(0.0f);
-	char header;
-	float x, y, z;
-	while (infile >> header >> x >> y >> z) {
-		if (header == 'v') {
-			//vec = glm::vec3(x, y, z);
-			//vertices.push_back(vec);
-			//out_vertices.push_back(vec);
-		}
-		else if (header == 'n') {
-			vec = glm::vec3(x, y, z);
-			//normals.push_back(vec);
-			out_normals.push_back(vec);
-		}
-		else if (header == 'i') {
-			//normals.push_back(vec);
 
-		}
-		else return false;
-	}
-
-	//out_vertices=vertices;
-	//out_normals=normals;
-
-	return true;
-}
 class YJ {
 public:
-	GLuint VAO, positionBuffer, normalBuffer, scalarBuffer, smoothedNormalsBuffer, EBO; 
+	GLuint geomVAO, quadVAO, quadVBO, positionBuffer, normalBuffer, scalarBuffer, smoothedNormalsBuffer, geomEBO; 
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec3> normals;
 	// std::vector<glm::vec2> textureCoordinates;
@@ -69,6 +35,16 @@ public:
 	float feature;
 	bool isSet = false;
 
+    const float quadVertices[24] = {
+        // 位置        // 纹理坐标
+        -1.0f,  1.0f, 0.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f,
+         1.0f, -1.0f, 1.0f, 0.0f,
+
+        -1.0f,  1.0f, 0.0f, 1.0f,
+         1.0f, -1.0f, 1.0f, 0.0f,
+         1.0f,  1.0f, 1.0f, 1.0f
+    };
 
 	// std::vector<glm::vec3> maxPDs, minPDs;
 	// std::vector<float> maxCurvs, minCurvs;
@@ -151,8 +127,8 @@ public:
 		smoothedPath.erase(smoothedPath.length() - 3, 3); //erases .yj, bad implementation tbh if the legth of the extension name changes it won't work
 		for (int i = 0; i < loadingScales; i++) {
 			smoothedPath = smoothedPath + "_k" + std::to_string(i+1) + ".yj";
-			if (!loadNormalsYJ(smoothedPath, this->smoothedNormals[i]))std::cout << "Failed to load smoothed normals at : " << smoothedPath << "\n";
-			else std::cout << "Loaded smoothed normals "<<i<< " at " << smoothedPath << "\nFirst smoothed normal : " << this->smoothedNormals[i][0].x << ", " << this->smoothedNormals[i][0].y << ", " << this->smoothedNormals[i][0].z<<"\n"<<"Size : "<<smoothedNormals[i].size()<<"\n";
+			// if (!loadNormalsYJ(smoothedPath, this->smoothedNormals[i]))std::cout << "Failed to load smoothed normals at : " << smoothedPath << "\n";
+			// else std::cout << "Loaded smoothed normals "<<i<< " at " << smoothedPath << "\nFirst smoothed normal : " << this->smoothedNormals[i][0].x << ", " << this->smoothedNormals[i][0].y << ", " << this->smoothedNormals[i][0].z<<"\n"<<"Size : "<<smoothedNormals[i].size()<<"\n";
 			if (i > 8)smoothedPath.erase(smoothedPath.length() - 7, 7); //erases _k(number i).yj, bad implementation tbh if the legth of the extension name changes it won't work
 			else smoothedPath.erase(smoothedPath.length() - 6, 6);
 		}
@@ -172,12 +148,12 @@ public:
 	void setup() {
 		std::cout << "Setting up buffers.\n";
 
-		glGenVertexArrays(1, &VAO); //vertex array object
+		glGenVertexArrays(1, &geomVAO ); //vertex array object
 		glGenBuffers(1, &positionBuffer); //vertex buffer object
 		glGenBuffers(1, &normalBuffer); //vertex buffer object
 		glGenBuffers(1, &scalarBuffer); //vertex buffer object
 		
-		glGenBuffers(1, &EBO); 
+		glGenBuffers(1, &geomEBO); 
 
 		// glGenBuffers(1, &maxPD);
 		// glGenBuffers(1, &minPD);
@@ -185,7 +161,7 @@ public:
 		// glGenBuffers(1, &minCurv);
 
 		//VAO  
-		glBindVertexArray(VAO); 
+		glBindVertexArray(geomVAO); 
 
 		glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
@@ -206,7 +182,7 @@ public:
 		// glBufferData(GL_ARRAY_BUFFER, minCurvs.size() * sizeof(float), &minCurvs[0], GL_STATIC_DRAW);
 
 		//EBO
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geomEBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
 
 		glEnableVertexAttribArray(0);
@@ -250,34 +226,37 @@ public:
 		glBindBuffer(GL_ARRAY_BUFFER,0);
 		glBindVertexArray(0);
 
-		std::cout << "Ready to render.\n";
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+		glBindVertexArray(quadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
 
+		glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+		
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+		std::cout << "Ready to render.\n";
 		return;
 	}
 
-	bool render(GLuint shader, bool isGeo) {
-
-		if (!isSet) { setup(); isSet = true; }
-
-		// glUniform1i(glGetUniformLocation(shader, "size"), smoothedNormals[0].size());
-		
+	bool geomRender(GLuint shader) {
 		glUseProgram(shader);
-		if (isGeo)
-		{
-			glBindVertexArray(VAO);
-		} else {
-			glBindVertexArray(0);
-		}
-		
+		glBindVertexArray(geomVAO);
 		glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(indices.size()), GL_UNSIGNED_INT, 0);
-		//glDisableVertexAttribArray(0);
-		//glDisableVertexAttribArray(1);
 		glBindVertexArray(0);
+		return true;
+	}
 
-		if (isGeo)
-		{
-        	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		}
+	bool quadRender(GLuint shader) {
+		glUseProgram(shader);
+		glBindVertexArray(quadVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
 		return true;
 	}
 };

@@ -1,8 +1,8 @@
-#version 430
+#version 450 core
 
 // in vec3 Normal;
 // in vec3 FragPos;
-// in vec2 TexCoords;
+in vec2 TexCoords;
 // in vec4 col;
 
 out vec4 FragColor;
@@ -11,6 +11,7 @@ out vec4 FragColor;
 uniform sampler2D gPosition;
 uniform sampler2D gNormal;
 uniform sampler2D gAlbedoSpec;
+uniform sampler2D gDepth;
 
 struct Light {
     vec3 position;
@@ -108,7 +109,7 @@ uniform float ambientFactor;
 void main() {
     // diffuse
     // vec3 norm = normalize(Normal);
-    vec3 lightPos = light.position;
+    // vec3 lightPos = light.position;
     // lightPos.x = -lightPos.x;
 
     // vec3 lightDir = normalize(lightPos - FragPos);
@@ -125,26 +126,28 @@ void main() {
     // color = vec4(xyzToRgb(labToXyz(labCol)), 1.0f);
 
         // Texture coordinates (assume fullscreen quad is rendered)
-    vec2 texCoords = gl_FragCoord.xy / vec2(textureSize(gPosition, 0));
+    // vec2 texCoords = gl_FragCoord.xy / vec2(textureSize(gPosition, 0));
 
     // Retrieve data from G-buffer
-    vec3 fragPos = texture(gPosition, texCoords).rgb;
-    vec3 normal = normalize(texture(gNormal, texCoords).rgb);
-    vec3 albedo = texture(gAlbedoSpec, texCoords).rgb;
-    float specularStrength = texture(gAlbedoSpec, texCoords).a;
+    // vec3 fragPos = texture(gPosition, TexCoords).rgb;
+    // vec3 normal = normalize(texture(gNormal, TexCoords).rgb);
+    // vec3 albedo = texture(gAlbedoSpec, TexCoords).rgb;
+    // float specularStrength = texture(gAlbedoSpec, TexCoords).a;
 
-    // Calculate lighting
-    vec3 ambient = ambientFactor * albedo;
+    // // Calculate lighting
+    // vec3 ambient = ambientFactor * albedo;
 
-    vec3 lightDir = normalize(lightPos - fragPos);
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * (highColor-lowColor) * albedo;
+    // vec3 lightDir = normalize(lightPos - fragPos);
+    // float diff = max(dot(normal, lightDir), 0.0);
+    // vec3 diffuse = diff * (highColor-lowColor) * albedo;
 
-    vec3 viewDir = normalize(viewPos - fragPos);
-    vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
-    vec3 specular = specularStrength * spec * (highColor-lowColor);
+    // vec3 viewDir = normalize(viewPos - fragPos);
+    // vec3 reflectDir = reflect(-lightDir, normal);
+    // float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16);
+    // vec3 specular = specularStrength * spec * (highColor-lowColor);
 
-    vec3 result = ambient + diffuse + specular;
-    FragColor = vec4(result, 1.0);
+    // vec3 result = ambient + diffuse + specular;
+    float depth = texture(gDepth, TexCoords).r;
+    FragColor = texture(gAlbedoSpec, TexCoords); //vec4(result, 1.0);
+    // vec4(vec3(texture(gDepth, TexCoords).r), 1.0);
 }

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.24.2)
 project(xshade LANGUAGES CXX)
 
-include("D:/vcpkg/scripts/buildsystems/vcpkg.cmake")
+include("C:/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
